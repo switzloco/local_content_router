@@ -104,6 +104,18 @@
       <div class="screen-body">
 
         <section class="settings-section">
+          <h2 class="settings-heading">Your Routing Instructions</h2>
+          <p class="settings-hint">Tell the AI what's work, what's personal, etc. These rules are injected into every classification.</p>
+          <textarea
+            id="routing-instructions"
+            class="transcript-textarea"
+            style="min-height:100px"
+            placeholder="Examples:&#10;- Anything about Acme Corp, Sarah, or Q3 report is work&#10;- Groceries, Emma's soccer, family stuff is personal&#10;- Dr. Martinez and any medical terms are health — always keep on device&#10;- Mortgage, account numbers, 1234 Oak St is finance"
+            spellcheck="false"
+          ></textarea>
+        </section>
+
+        <section class="settings-section">
           <h2 class="settings-heading">Routing Rules</h2>
           <p class="settings-hint">Where each content category goes by default.</p>
           <div id="routing-rules" class="routing-rules-grid"></div>

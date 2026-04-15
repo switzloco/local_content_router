@@ -1,12 +1,14 @@
-// model.js — Gemma 4 WebGPU / WASM loader via @huggingface/transformers
+// model.js — Gemma 4 WebGPU loader via @huggingface/transformers v4+
+// Uses Gemma4ForConditionalGeneration + AutoProcessor (NOT the pipeline API)
 
-const TF_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
-
-let pipeline, TextStreamer, env;
+let Gemma4ForConditionalGeneration, AutoProcessor, TextStreamer, env;
 
 async function loadTransformers() {
-  const mod = await import(`${TF_CDN}/dist/transformers.min.js`);
-  pipeline = mod.pipeline;
+  const mod = await import(
+    'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4/dist/transformers.min.js'
+  );
+  Gemma4ForConditionalGeneration = mod.Gemma4ForConditionalGeneration;
+  AutoProcessor = mod.AutoProcessor;
   TextStreamer = mod.TextStreamer;
   env = mod.env;
   env.allowLocalModels = false;
@@ -14,13 +16,13 @@ async function loadTransformers() {
 
 class ModelManager {
   constructor() {
-    this.generator = null;
+    this.model = null;
+    this.processor = null;
     this.device = null;
     this.modelId = null;
     this.ready = false;
   }
 
-  /** Check if browser supports WebGPU */
   async detectDevice() {
     if (typeof navigator !== 'undefined' && navigator.gpu) {
       try {
@@ -32,7 +34,7 @@ class ModelManager {
   }
 
   /**
-   * Load the model. Calls onProgress({ status, progress, message }) throughout.
+   * Load model + processor. Calls onProgress({ status, progress, message }).
    * status: 'detect' | 'download' | 'load' | 'ready' | 'error'
    */
   async init(modelId, onProgress) {
@@ -44,27 +46,33 @@ class ModelManager {
       onProgress?.({ status: 'detect', message: `Using ${this.device.toUpperCase()} backend` });
 
       this.modelId = modelId;
-
       onProgress?.({ status: 'download', progress: 0, message: 'Downloading model…' });
 
       const dtype = this.device === 'webgpu' ? 'q4f16' : 'q8';
 
-      this.generator = await pipeline('text-generation', modelId, {
-        device: this.device,
-        dtype,
-        progress_callback: (p) => {
-          if (p.status === 'progress' && p.progress != null) {
-            onProgress?.({
-              status: 'download',
-              progress: Math.round(p.progress),
-              message: `Downloading: ${Math.round(p.progress)}%`,
-            });
-          } else if (p.status === 'done') {
-            onProgress?.({ status: 'load', progress: 100, message: 'Initializing model…' });
-          }
-        },
-      });
+      // Load processor and model in parallel
+      const [processor, model] = await Promise.all([
+        AutoProcessor.from_pretrained(modelId),
+        Gemma4ForConditionalGeneration.from_pretrained(modelId, {
+          device: this.device,
+          dtype,
+          progress_callback: (p) => {
+            if (p.status === 'progress' && p.total) {
+              const pct = Math.round((p.loaded / p.total) * 100);
+              onProgress?.({
+                status: 'download',
+                progress: pct,
+                message: `Downloading: ${pct}%`,
+              });
+            } else if (p.status === 'done') {
+              onProgress?.({ status: 'load', progress: 100, message: 'Initializing model…' });
+            }
+          },
+        }),
+      ]);
 
+      this.processor = processor;
+      this.model = model;
       this.ready = true;
       onProgress?.({ status: 'ready', progress: 100, message: 'Model ready' });
     } catch (err) {
@@ -78,38 +86,45 @@ class ModelManager {
    * @param {Array<{role:string, content:string}>} messages
    * @param {object} opts
    * @param {number} opts.maxTokens - max new tokens (default 1024)
-   * @param {function} opts.onToken - streaming callback (receives partial text)
-   * @returns {string} Generated text
+   * @param {function} opts.onToken - streaming callback (receives text chunk)
+   * @returns {string} Full generated text
    */
   async generate(messages, { maxTokens = 1024, onToken } = {}) {
     if (!this.ready) throw new Error('Model not loaded');
 
-    const genOpts = {
+    // Apply chat template to get formatted prompt string
+    const prompt = this.processor.apply_chat_template(messages, {
+      enable_thinking: false,
+      add_generation_prompt: true,
+    });
+
+    // Tokenize — signature: processor(text, image, audio, options)
+    const inputs = await this.processor(prompt, null, null, {
+      add_special_tokens: false,
+    });
+
+    // Stream decoded tokens via TextStreamer
+    let result = '';
+    const streamer = new TextStreamer(this.processor.tokenizer, {
+      skip_prompt: true,
+      skip_special_tokens: true,
+      callback_function: (text) => {
+        result += text;
+        onToken?.(text);
+      },
+    });
+
+    await this.model.generate({
+      ...inputs,
       max_new_tokens: maxTokens,
       do_sample: false,
-      return_full_text: false,
-    };
+      streamer,
+    });
 
-    if (onToken && TextStreamer) {
-      genOpts.streamer = new TextStreamer(this.generator.tokenizer, {
-        skip_prompt: true,
-        callback_function: onToken,
-      });
-    }
-
-    const result = await this.generator(messages, genOpts);
-
-    // transformers.js returns an array; get generated text from last message
-    const output = result[0]?.generated_text;
-    if (Array.isArray(output)) {
-      // Chat-mode: array of messages
-      return output.at(-1)?.content ?? '';
-    }
-    // Plain string
-    return typeof output === 'string' ? output : '';
+    return result;
   }
 
-  /** Clear the cached model files */
+  /** Clear cached model files from browser storage */
   async clearCache() {
     if (typeof caches !== 'undefined') {
       const keys = await caches.keys();

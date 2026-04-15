@@ -70,7 +70,20 @@ async function init() {
   bindEvents();
   applyConfig();
   checkWebGPU();
+  handleShareTarget();
   await loadModel();
+}
+
+/** Pick up text shared via Android share target (or URL params) */
+function handleShareTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const shared = params.get('text') || params.get('title') || params.get('url');
+  if (shared) {
+    dom.textarea.value = shared;
+    onTextChange();
+    // Clean up the URL without reloading
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 }
 
 function registerPlugins() {
@@ -126,6 +139,16 @@ function bindEvents() {
   }
   dom.modelSelect.addEventListener('change', onModelChange);
   dom.btnAddDest.addEventListener('click', onAddCustomDest);
+
+  // Routing instructions
+  const instrEl = $('#routing-instructions');
+  if (instrEl) {
+    instrEl.value = cfg.routingInstructions || '';
+    instrEl.addEventListener('input', () => {
+      cfg.routingInstructions = instrEl.value;
+      config.save(cfg);
+    });
+  }
   dom.btnExport.addEventListener('click', () => config.exportJSON(cfg));
   dom.btnImport.addEventListener('click', async () => {
     try {
@@ -238,6 +261,7 @@ async function onProcess() {
         appendSegmentCard(seg);
         dom.reviewSummary.textContent = `${i + 1} of ${total} segments`;
       },
+      cfg.routingInstructions || '',
     );
 
     dom.processBanner.hidden = true;
