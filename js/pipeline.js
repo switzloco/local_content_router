@@ -1,4 +1,7 @@
 // pipeline.js — Segment → Classify → De-identify pipeline using Gemma 4
+//
+// Segmentation is done with fast heuristics (no LLM call).
+// Only classification + de-identification use Gemma — that's where AI matters.
 
 import model from './model.js';
 
@@ -6,10 +9,8 @@ import model from './model.js';
  * Extract JSON from an LLM response that may contain markdown fences or extra text.
  */
 function extractJSON(text) {
-  // Strip markdown code fences
   let cleaned = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
 
-  // Try to find a JSON array or object
   const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
   if (arrayMatch) return JSON.parse(arrayMatch[0]);
 
@@ -20,60 +21,56 @@ function extractJSON(text) {
 }
 
 /**
- * Step 1: Segment a raw transcript into distinct topics/thoughts.
- * Returns string[] of segments.
+ * Step 1: Segment transcript using heuristics (instant, no LLM).
+ *
+ * Strategy: split on paragraph breaks, then on topic-shift signals
+ * (sentence ending + new sentence starting with a capital letter and
+ * a transition word or clear subject change).
  */
-export async function segmentTranscript(text, onStatus) {
-  onStatus?.('Segmenting transcript…');
-
-  const messages = [
-    {
-      role: 'user',
-      content: `You are a transcript segmenter. Split the following voice memo transcript into distinct segments. Each segment should cover one complete thought, task, or topic. Keep the original wording — do not summarize or rephrase. Return ONLY a JSON array of strings, nothing else.
-
-Transcript:
-"""
-${text}
-"""`
-    },
-  ];
-
-  const raw = await model.generate(messages, { maxTokens: 2048 });
-
-  try {
-    const segments = extractJSON(raw);
-    if (Array.isArray(segments) && segments.length > 0) {
-      return segments.map(s => String(s).trim()).filter(Boolean);
-    }
-  } catch { /* fall through to fallback */ }
-
-  // Fallback: split on double newlines or sentence boundaries
-  onStatus?.('Using fallback segmentation…');
-  return fallbackSegment(text);
-}
-
-function fallbackSegment(text) {
-  // Try double-newline split first
+export function segmentTranscript(text) {
+  // 1. Paragraph breaks (double newline)
   let parts = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  if (parts.length > 1) return mergeShort(parts);
+
+  // 2. Single newlines that separate distinct thoughts
+  parts = text.split(/\n/).map(s => s.trim()).filter(Boolean);
+  if (parts.length > 1) return mergeShort(parts);
+
+  // 3. Sentence boundaries followed by topic-shift signals
+  const TOPIC_SHIFT = /(?<=[.!?])\s+(?=(?:Also|Oh|One more|Another|Remind|Need to|I (?:should|need|have|want|got)|For (?:the|my)|Don't forget|Pick up|Call |Schedule|Check|Submit|Send|OK |Okay ))/i;
+  parts = text.split(TOPIC_SHIFT).map(s => s.trim()).filter(s => s.length > 10);
   if (parts.length > 1) return parts;
 
-  // Split on sentence-ending punctuation followed by a topic shift signal
+  // 4. Plain sentence boundary + capital letter
   parts = text
     .split(/(?<=[.!?])\s+(?=[A-Z])/)
     .map(s => s.trim())
     .filter(s => s.length > 10);
+  if (parts.length > 1) return mergeShort(parts);
 
-  if (parts.length > 1) return parts;
-
-  // Last resort: return the whole thing as one segment
+  // 5. Whole transcript as one segment
   return [text.trim()];
+}
+
+/** Merge very short segments (< 40 chars) into their neighbor */
+function mergeShort(parts, minLen = 40) {
+  const merged = [];
+  for (const p of parts) {
+    if (merged.length > 0 && merged[merged.length - 1].length < minLen) {
+      merged[merged.length - 1] += ' ' + p;
+    } else {
+      merged.push(p);
+    }
+  }
+  return merged;
 }
 
 /**
  * Step 2: Classify a single segment and de-identify PII.
- * Returns a classification object.
+ * This is the only step that calls Gemma.
  */
 export async function classifySegment(segmentText, piiConfig, onStatus, userInstructions) {
+  const t0 = performance.now();
   onStatus?.('Classifying…');
 
   const enabledPII = Object.entries(piiConfig || {})
@@ -110,7 +107,11 @@ ${segmentText}
     },
   ];
 
-  const raw = await model.generate(messages, { maxTokens: 1024 });
+  // Cap output tokens to prevent runaway generation.
+  // The JSON response should be ~200 tokens max for a typical segment.
+  const raw = await model.generate(messages, { maxTokens: 512 });
+  const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+  console.log(`[pipeline] classify segment (${segmentText.length} chars) → ${elapsed}s`);
 
   try {
     const result = extractJSON(raw);
@@ -123,7 +124,7 @@ ${segmentText}
       original: segmentText,
     };
   } catch {
-    // Fallback: return a best-effort classification
+    console.warn('[pipeline] failed to parse classification JSON:', raw);
     return {
       category: 'other',
       confidence: 0,
@@ -145,17 +146,19 @@ function validCategory(cat) {
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
 /**
- * Full pipeline: segment → classify each → return results.
+ * Full pipeline: segment (heuristic) → classify each (Gemma) → return results.
  * Calls onSegment(result, index, total) as each segment is classified.
  */
 export async function processTranscript(text, piiConfig, onStatus, onSegment, userInstructions) {
-  onStatus?.('Starting pipeline…');
+  const t0 = performance.now();
 
-  // Step 1: segment
-  const segments = await segmentTranscript(text, onStatus);
+  // Step 1: fast heuristic segmentation (instant, no LLM)
+  onStatus?.('Segmenting transcript…');
+  const segments = segmentTranscript(text);
+  console.log(`[pipeline] segmented into ${segments.length} parts (heuristic, instant)`);
   onStatus?.(`Found ${segments.length} segment${segments.length === 1 ? '' : 's'}. Classifying…`);
 
-  // Step 2: classify each (sequentially to avoid memory pressure)
+  // Step 2: classify each with Gemma (sequentially to avoid memory pressure)
   const results = [];
   for (let i = 0; i < segments.length; i++) {
     onStatus?.(`Classifying segment ${i + 1} of ${segments.length}…`);
@@ -165,6 +168,8 @@ export async function processTranscript(text, piiConfig, onStatus, onSegment, us
     onSegment?.(result, i, segments.length);
   }
 
-  onStatus?.(`Done — ${results.length} segments classified.`);
+  const total = ((performance.now() - t0) / 1000).toFixed(1);
+  console.log(`[pipeline] done — ${results.length} segments in ${total}s`);
+  onStatus?.(`Done — ${results.length} segments in ${total}s`);
   return results;
 }

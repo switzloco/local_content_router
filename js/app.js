@@ -501,5 +501,23 @@ async function loadModel() {
   }
 }
 
+// ── Service worker + persistent storage ──
+async function registerSW() {
+  if ('serviceWorker' in navigator) {
+    try {
+      await navigator.serviceWorker.register('./sw.js');
+    } catch { /* ok if it fails */ }
+  }
+  // Ask the browser to protect our storage from eviction.
+  // On Chrome Android this usually auto-grants for installed PWAs.
+  if (navigator.storage?.persist) {
+    const persisted = await navigator.storage.persist();
+    if (!persisted) {
+      console.log('Storage persistence not granted — model cache may be evicted under pressure');
+    }
+  }
+}
+
 // ── Start ──
+registerSW();
 init();

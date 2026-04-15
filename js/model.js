@@ -50,9 +50,13 @@ class ModelManager {
 
       const dtype = this.device === 'webgpu' ? 'q4f16' : 'q8';
 
-      // Track aggregate download progress across all model shards
-      const fileProgress = {};  // file → { loaded, total }
+      // Track aggregate download progress across all model shards.
+      // Shards that were cached from a previous (interrupted) download resolve
+      // almost instantly — so the bar picks up where it left off, not from 0%.
+      const fileProgress = {};   // file → { loaded, total }
+      const cachedFiles = new Set();  // files that loaded instantly (= cached)
       let lastPct = 0;
+      let lastUpdate = 0;       // timestamp — throttle UI updates to ~4/sec
 
       const [processor, model] = await Promise.all([
         AutoProcessor.from_pretrained(modelId),
@@ -60,22 +64,41 @@ class ModelManager {
           device: this.device,
           dtype,
           progress_callback: (p) => {
-            if (p.status === 'progress' && p.file && p.total) {
+            if (p.status === 'initiate' && p.file) {
+              // File starting — track it
+              fileProgress[p.file] = { loaded: 0, total: 0 };
+            } else if (p.status === 'progress' && p.file && p.total) {
               fileProgress[p.file] = { loaded: p.loaded, total: p.total };
+
+              // If a file jumps to 100% on its very first progress event,
+              // it was served from cache — note it for the status message.
+              if (p.loaded === p.total && !cachedFiles.has(p.file)) {
+                const prev = fileProgress[p.file]?.loaded ?? 0;
+                if (prev === 0) cachedFiles.add(p.file);
+              }
+
               let totalLoaded = 0, totalSize = 0;
               for (const f of Object.values(fileProgress)) {
                 totalLoaded += f.loaded;
                 totalSize += f.total;
               }
               const pct = totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0;
-              // Only update if progress actually moved forward (avoids jitter)
-              if (pct >= lastPct) {
+              const now = Date.now();
+
+              // Only update if progress moved forward + throttle to avoid DOM thrash
+              if (pct >= lastPct && (now - lastUpdate > 250 || pct === 100)) {
                 lastPct = pct;
-                onProgress?.({
-                  status: 'download',
-                  progress: pct,
-                  message: `Downloading: ${pct}%`,
-                });
+                lastUpdate = now;
+
+                const cached = cachedFiles.size;
+                const total = Object.keys(fileProgress).length;
+                const msg = cached > 0 && cached < total
+                  ? `Downloading: ${pct}% (${cached} file${cached > 1 ? 's' : ''} cached)`
+                  : cached === total
+                    ? 'Loading from cache…'
+                    : `Downloading: ${pct}%`;
+
+                onProgress?.({ status: 'download', progress: pct, message: msg });
               }
             } else if (p.status === 'done') {
               onProgress?.({ status: 'load', progress: 100, message: 'Initializing model…' });
