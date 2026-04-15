@@ -50,20 +50,33 @@ class ModelManager {
 
       const dtype = this.device === 'webgpu' ? 'q4f16' : 'q8';
 
-      // Load processor and model in parallel
+      // Track aggregate download progress across all model shards
+      const fileProgress = {};  // file → { loaded, total }
+      let lastPct = 0;
+
       const [processor, model] = await Promise.all([
         AutoProcessor.from_pretrained(modelId),
         Gemma4ForConditionalGeneration.from_pretrained(modelId, {
           device: this.device,
           dtype,
           progress_callback: (p) => {
-            if (p.status === 'progress' && p.total) {
-              const pct = Math.round((p.loaded / p.total) * 100);
-              onProgress?.({
-                status: 'download',
-                progress: pct,
-                message: `Downloading: ${pct}%`,
-              });
+            if (p.status === 'progress' && p.file && p.total) {
+              fileProgress[p.file] = { loaded: p.loaded, total: p.total };
+              let totalLoaded = 0, totalSize = 0;
+              for (const f of Object.values(fileProgress)) {
+                totalLoaded += f.loaded;
+                totalSize += f.total;
+              }
+              const pct = totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0;
+              // Only update if progress actually moved forward (avoids jitter)
+              if (pct >= lastPct) {
+                lastPct = pct;
+                onProgress?.({
+                  status: 'download',
+                  progress: pct,
+                  message: `Downloading: ${pct}%`,
+                });
+              }
             } else if (p.status === 'done') {
               onProgress?.({ status: 'load', progress: 100, message: 'Initializing model…' });
             }
