@@ -73,7 +73,7 @@ function fallbackSegment(text) {
  * Step 2: Classify a single segment and de-identify PII.
  * Returns a classification object.
  */
-export async function classifySegment(segmentText, piiConfig, onStatus) {
+export async function classifySegment(segmentText, piiConfig, onStatus, userInstructions) {
   onStatus?.('Classifying…');
 
   const enabledPII = Object.entries(piiConfig || {})
@@ -83,6 +83,10 @@ export async function classifySegment(segmentText, piiConfig, onStatus) {
   const piiInstruction = enabledPII.length > 0
     ? `Detect these PII types and replace them in "clean": ${enabledPII.join(', ')}. Use placeholders like [PERSON], [DATE], [PHONE], [EMAIL], [ADDRESS], [ACCOUNT], [MEDICAL_ID].`
     : 'Do not modify the text for PII.';
+
+  const customRules = userInstructions
+    ? `\nAdditional classification rules from the user:\n${userInstructions}\n`
+    : '';
 
   const messages = [
     {
@@ -98,8 +102,7 @@ Required JSON format:
   "clean": "text with PII replaced by placeholders"
 }
 
-${piiInstruction}
-
+${piiInstruction}${customRules}
 Text:
 """
 ${segmentText}
@@ -145,7 +148,7 @@ function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
  * Full pipeline: segment → classify each → return results.
  * Calls onSegment(result, index, total) as each segment is classified.
  */
-export async function processTranscript(text, piiConfig, onStatus, onSegment) {
+export async function processTranscript(text, piiConfig, onStatus, onSegment, userInstructions) {
   onStatus?.('Starting pipeline…');
 
   // Step 1: segment
@@ -156,7 +159,7 @@ export async function processTranscript(text, piiConfig, onStatus, onSegment) {
   const results = [];
   for (let i = 0; i < segments.length; i++) {
     onStatus?.(`Classifying segment ${i + 1} of ${segments.length}…`);
-    const result = await classifySegment(segments[i], piiConfig, () => {});
+    const result = await classifySegment(segments[i], piiConfig, () => {}, userInstructions);
     result.id = i;
     results.push(result);
     onSegment?.(result, i, segments.length);

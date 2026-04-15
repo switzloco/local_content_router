@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = {
   piiTypes: Object.fromEntries(PII_TYPES.map(t => [t, true])),
   modelId: 'onnx-community/gemma-4-E2B-it-ONNX',
   customDestinations: [], // [{ id, name, urlTemplate }]
+  routingInstructions: '', // user's custom instructions for classification
 };
 
 function load() {
