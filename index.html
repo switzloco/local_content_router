@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Local Content Router</title>
+  <meta name="description" content="Route your brain dump to the right app — entirely on your device using Gemma 4">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ── Model Loading Overlay ── -->
+  <div id="loading-overlay" class="loading-overlay" role="dialog" aria-label="Loading model" hidden>
+    <div class="loading-card">
+      <div class="loading-icon" aria-hidden="true">🧠</div>
+      <h2 id="loading-title">Loading Gemma 4</h2>
+      <p id="loading-status">Preparing on-device AI…</p>
+      <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+      <p id="loading-detail" class="loading-detail">
+        First load downloads ~500 MB and caches locally.<br>
+        Subsequent loads are instant.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── App Shell ── -->
+  <div class="app-shell">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-icon" aria-hidden="true">🔀</span>
+        <span class="brand-name">Local Router</span>
+      </div>
+      <nav class="screen-nav" aria-label="Main navigation">
+        <button class="nav-btn active" data-screen="input" aria-current="page">Input</button>
+        <button class="nav-btn" data-screen="review" id="nav-review" disabled aria-disabled="true">Review</button>
+        <button class="nav-btn" data-screen="settings">Settings</button>
+      </nav>
+    </header>
+
+    <!-- ── Screen: Input ── -->
+    <main id="screen-input" class="screen active" aria-label="Transcript input">
+      <div class="screen-body">
+
+        <div class="input-toolbar">
+          <button id="btn-mic" class="btn btn-icon" title="Voice input (Web Speech API)" aria-label="Start voice input">
+            <span class="btn-icon-glyph">🎤</span>
+            <span class="btn-label">Speak</span>
+          </button>
+          <span class="spacer"></span>
+          <button id="btn-demo" class="btn btn-ghost btn-sm">Load demo</button>
+          <button id="btn-clear" class="btn btn-ghost btn-sm">Clear</button>
+        </div>
+
+        <textarea
+          id="transcript-input"
+          class="transcript-textarea"
+          placeholder="Paste your morning brain dump here, or tap 🎤 to speak…&#10;&#10;Example: 'Need to send the Q3 report to Sarah by Friday. Remind me to book dentist appt. The patient follow-up for Smith case needs a call before noon…'"
+          spellcheck="false"
+          aria-label="Transcript text"
+        ></textarea>
+
+        <div class="input-footer">
+          <span id="char-count" class="char-count">0 characters</span>
+          <span id="mic-status" class="mic-status" aria-live="polite"></span>
+        </div>
+
+        <div id="webgpu-warning" class="banner banner-warning" hidden role="alert">
+          ⚠️ WebGPU not detected. Falling back to WASM (slower, no GPU acceleration). For best performance use Chrome 113+.
+        </div>
+
+        <button id="btn-process" class="btn btn-primary btn-lg" disabled aria-disabled="true">
+          Route my notes →
+        </button>
+
+      </div>
+    </main>
+
+    <!-- ── Screen: Review ── -->
+    <main id="screen-review" class="screen" hidden aria-label="Review and route segments">
+
+      <div class="review-toolbar">
+        <button id="btn-back" class="btn btn-ghost btn-sm">← Back</button>
+        <span id="review-summary" class="review-summary" aria-live="polite"></span>
+        <button id="btn-route-all" class="btn btn-primary btn-sm">Send All ✓</button>
+      </div>
+
+      <div id="processing-banner" class="banner banner-info" hidden aria-live="polite">
+        <span id="processing-status">Processing transcript…</span>
+        <div class="processing-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <div id="segments-container" class="segments-container" aria-label="Classified segments"></div>
+
+    </main>
+
+    <!-- ── Screen: Settings ── -->
+    <main id="screen-settings" class="screen" hidden aria-label="Settings">
+      <div class="screen-body">
+
+        <section class="settings-section">
+          <h2 class="settings-heading">Routing Rules</h2>
+          <p class="settings-hint">Where each content category goes by default.</p>
+          <div id="routing-rules" class="routing-rules-grid"></div>
+        </section>
+
+        <section class="settings-section">
+          <h2 class="settings-heading">De-identification</h2>
+          <label class="toggle-row">
+            <span class="toggle-label-text">Strip PII before routing</span>
+            <input type="checkbox" id="toggle-deidentify" class="toggle-input" checked>
+            <span class="toggle-switch" aria-hidden="true"></span>
+          </label>
+          <div id="pii-options" class="pii-options">
+            <label class="check-row"><input type="checkbox" data-pii="person_name" checked> Person names</label>
+            <label class="check-row"><input type="checkbox" data-pii="date" checked> Specific dates</label>
+            <label class="check-row"><input type="checkbox" data-pii="phone" checked> Phone numbers</label>
+            <label class="check-row"><input type="checkbox" data-pii="email" checked> Email addresses</label>
+            <label class="check-row"><input type="checkbox" data-pii="address" checked> Street addresses</label>
+            <label class="check-row"><input type="checkbox" data-pii="account" checked> Account / ID numbers</label>
+            <label class="check-row"><input type="checkbox" data-pii="medical_id" checked> Medical identifiers</label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h2 class="settings-heading">Model</h2>
+          <select id="model-select" class="select-input" aria-label="Choose model">
+            <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (~500 MB) — Fast</option>
+            <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (~1.5 GB) — More accurate</option>
+          </select>
+          <p class="settings-hint">Downloads once, cached in browser. Model never leaves your device.</p>
+        </section>
+
+        <section class="settings-section">
+          <h2 class="settings-heading">Custom Destination</h2>
+          <div class="custom-dest-form">
+            <input type="text" id="custom-dest-name" class="text-input" placeholder="Name (e.g. My EHR)">
+            <input type="url" id="custom-dest-url" class="text-input" placeholder="URL template (use {{text}} for content)">
+            <button id="btn-add-dest" class="btn btn-secondary">Add Destination</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h2 class="settings-heading">Data</h2>
+          <div class="button-row">
+            <button id="btn-export-config" class="btn btn-secondary">Export Config</button>
+            <button id="btn-import-config" class="btn btn-secondary">Import Config</button>
+          </div>
+          <button id="btn-clear-cache" class="btn btn-danger">Clear Model Cache</button>
+        </section>
+
+      </div>
+    </main>
+
+  </div><!-- /app-shell -->
+
+  <!-- Segment card template (cloned by JS, not rendered) -->
+  <template id="segment-card-tpl">
+    <article class="segment-card" data-category="" data-id="">
+      <div class="card-header">
+        <span class="category-pill"></span>
+        <span class="confidence-badge"></span>
+        <div class="card-actions">
+          <button class="btn btn-icon btn-sm card-toggle-pii" title="Toggle PII redaction" aria-label="Toggle redaction">🔒</button>
+          <select class="dest-select btn btn-sm" aria-label="Route destination"></select>
+        </div>
+      </div>
+      <div class="card-summary"></div>
+      <div class="card-text clean-text"></div>
+      <details class="original-details">
+        <summary>Show original</summary>
+        <div class="card-text original-text"></div>
+      </details>
+      <button class="btn btn-primary btn-sm card-send-btn">Send →</button>
+      <div class="card-sent-msg" hidden aria-live="polite"></div>
+    </article>
+  </template>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

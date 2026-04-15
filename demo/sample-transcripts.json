@@ -1,0 +1,16 @@
+{
+  "samples": [
+    {
+      "name": "Morning brain dump — knowledge worker",
+      "text": "Okay so first thing, I need to send the Q3 sales report to Sarah Chen by end of day Friday. Make sure to include the updated pipeline numbers from the CRM.\n\nAlso remind me to call Dr. Martinez's office about my follow-up appointment, it was supposed to be next Tuesday. My patient ID is MRN-4482.\n\nFor the team standup today, we need to discuss the API migration timeline. Jake said the staging environment should be ready by next week but I'm not sure if QA has signed off.\n\nPick up groceries on the way home — we need milk, bread, and that pasta sauce Emma likes. Oh and her soccer practice is at 4:30 at Jefferson Park.\n\nI should move some money from checking to savings, the auto-payment for the mortgage at 1234 Oak Street goes through on the 15th. Account ending in 7891.\n\nOne more work thing — schedule a 1:1 with Maria about the Q4 budget proposal. She mentioned concerns about the contractor spend."
+    },
+    {
+      "name": "Doctor's morning rounds",
+      "text": "Patient John Smith in room 312, DOB March 15 1958, came in with chest pain radiating to left arm. EKG shows ST elevation in leads V1 through V4. Started on heparin drip, cardiology consult requested. Need to update the family — wife's number is 555-0147.\n\nAdministratively, I need to submit my CME hours for the board recertification, deadline is end of this month. The online portal has been giving me trouble.\n\nMrs. Rodriguez in 308, MRN 22845, post-op day two from the hip replacement. Physical therapy started, tolerating clear liquids, pain managed on current regimen. Can probably discharge tomorrow if vitals stay stable.\n\nRemind me to call my insurance agent, the home policy at 456 Elm Drive needs to be renewed before June. Agent's number is 555-0199.\n\nAlso need to review the new resident schedule for July. Three incoming interns from University of Michigan."
+    },
+    {
+      "name": "Teacher planning session",
+      "text": "For my third period AP History class, I want to start the Cold War unit next Monday. Need to print the primary source documents from the shared drive. Also Tommy Walker has been struggling with the essay format — schedule a check-in with him and maybe loop in his parents.\n\nGrocery run after school — need stuff for dinner tonight and also snacks for the department meeting Thursday.\n\nJayla Peterson and Marcus Kim both submitted really strong papers on the Civil Rights movement. I should nominate them for the district writing award. The submission form is due by May 3rd to Dr. Hernandez.\n\nMy car registration renewal notice came in, it's due by the 20th. Registration number is ABC-1234. Need to do the emissions test first.\n\nFor the curriculum committee meeting on Friday, I need to prepare the scope and sequence document for next year's 10th grade classes. Check if the new textbook adoption went through."
+    }
+  ]
+}
