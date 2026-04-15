@@ -104,13 +104,40 @@
       <div class="screen-body">
 
         <section class="settings-section">
-          <h2 class="settings-heading">Your Routing Instructions</h2>
-          <p class="settings-hint">Tell the AI what's work, what's personal, etc. These rules are injected into every classification.</p>
+          <h2 class="settings-heading">Keywords</h2>
+          <p class="settings-hint">Segments matching these keywords are classified instantly (no AI delay). Comma-separated.</p>
+          <div class="keyword-grid">
+            <label class="keyword-row">
+              <span class="keyword-cat" style="color:var(--cat-work)">Work</span>
+              <input type="text" class="text-input" data-keywords="work" placeholder="report, meeting, client, deadline…">
+            </label>
+            <label class="keyword-row">
+              <span class="keyword-cat" style="color:var(--cat-health)">Health</span>
+              <input type="text" class="text-input" data-keywords="health" placeholder="patient, MRN, diagnosis, doctor…">
+            </label>
+            <label class="keyword-row">
+              <span class="keyword-cat" style="color:var(--cat-personal)">Personal</span>
+              <input type="text" class="text-input" data-keywords="personal" placeholder="groceries, family, weekend…">
+            </label>
+            <label class="keyword-row">
+              <span class="keyword-cat" style="color:var(--cat-finance)">Finance</span>
+              <input type="text" class="text-input" data-keywords="finance" placeholder="mortgage, payment, account, bank…">
+            </label>
+            <label class="keyword-row">
+              <span class="keyword-cat" style="color:var(--cat-education)">Education</span>
+              <input type="text" class="text-input" data-keywords="education" placeholder="student, class, curriculum…">
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h2 class="settings-heading">AI Routing Instructions</h2>
+          <p class="settings-hint">Extra context for Gemma when classifying segments that don't match any keywords.</p>
           <textarea
             id="routing-instructions"
             class="transcript-textarea"
-            style="min-height:100px"
-            placeholder="Examples:&#10;- Anything about Acme Corp, Sarah, or Q3 report is work&#10;- Groceries, Emma's soccer, family stuff is personal&#10;- Dr. Martinez and any medical terms are health — always keep on device&#10;- Mortgage, account numbers, 1234 Oak St is finance"
+            style="min-height:80px"
+            placeholder="Examples:&#10;- Anything about Acme Corp or Sarah is work&#10;- Dr. Martinez is health — always keep on device"
             spellcheck="false"
           ></textarea>
         </section>
