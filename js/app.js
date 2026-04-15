@@ -149,6 +149,17 @@ function bindEvents() {
       config.save(cfg);
     });
   }
+
+  // Keyword inputs (one per category)
+  for (const el of $$('[data-keywords]')) {
+    const cat = el.dataset.keywords;
+    el.value = cfg.keywords?.[cat] || '';
+    el.addEventListener('input', () => {
+      if (!cfg.keywords) cfg.keywords = {};
+      cfg.keywords[cat] = el.value;
+      config.save(cfg);
+    });
+  }
   dom.btnExport.addEventListener('click', () => config.exportJSON(cfg));
   dom.btnImport.addEventListener('click', async () => {
     try {
@@ -262,6 +273,7 @@ async function onProcess() {
         dom.reviewSummary.textContent = `${i + 1} of ${total} segments`;
       },
       cfg.routingInstructions || '',
+      cfg.keywords || {},
     );
 
     dom.processBanner.hidden = true;
@@ -280,7 +292,8 @@ function appendSegmentCard(seg) {
   card.dataset.id = seg.id;
 
   card.querySelector('.category-pill').textContent = seg.category;
-  card.querySelector('.confidence-badge').textContent = `${Math.round(seg.confidence * 100)}%`;
+  const badge = card.querySelector('.confidence-badge');
+  badge.textContent = seg.matchedBy === 'keyword' ? '⚡ keyword' : `${Math.round(seg.confidence * 100)}%`;
   card.querySelector('.card-summary').textContent = seg.summary;
   card.querySelector('.clean-text').innerHTML = highlightPII(seg.clean);
   card.querySelector('.original-text').textContent = seg.original;
@@ -491,6 +504,9 @@ async function loadModel() {
     modelReady = true;
     dom.overlay.hidden = true;
     onTextChange(); // enable process button if text present
+
+    // Pre-warm: compile WebGPU shaders in the background while user reads UI
+    model.prewarm();
   } catch (err) {
     dom.loadTitle.textContent = 'Load failed';
     dom.loadStatus.textContent = err.message;

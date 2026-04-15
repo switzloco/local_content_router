@@ -23,6 +23,15 @@ const DEFAULT_CONFIG = {
   modelId: 'onnx-community/gemma-4-E2B-it-ONNX',
   customDestinations: [], // [{ id, name, urlTemplate }]
   routingInstructions: '', // user's custom instructions for classification
+  // Keywords for instant pre-classification (skips Gemma when matched)
+  keywords: {
+    work: 'report, meeting, standup, deadline, project, sprint, client, invoice, stakeholder, deliverable, KPI, OKR, quarterly',
+    health: 'patient, MRN, diagnosis, prescription, appointment, doctor, symptoms, vitals, EKG, cardiology, follow-up, HIPAA, referral, lab results',
+    personal: '',
+    finance: 'mortgage, payment, account, bank, transfer, insurance, tax',
+    education: 'student, class, curriculum, grades, assignment, semester, course',
+    other: '',
+  },
 };
 
 function load() {

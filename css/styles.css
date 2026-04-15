@@ -456,6 +456,29 @@ body {
   width: 100%;
 }
 
+.keyword-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.keyword-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.keyword-cat {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  min-width: 70px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.keyword-row .text-input {
+  flex: 1;
+  font-size: 0.8125rem;
+  padding: 8px 10px;
+}
+
 .custom-dest-form {
   display: flex;
   flex-direction: column;

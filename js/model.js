@@ -160,6 +160,27 @@ class ModelManager {
     return result;
   }
 
+  /**
+   * Pre-warm: fire a tiny silent generation to force Chrome to compile
+   * WebGPU shaders in the background. Without this, the first real call
+   * pays a ~5-10s shader compilation tax on top of inference time.
+   * Call this right after init() — it runs while the user reads the UI.
+   */
+  async prewarm() {
+    if (!this.ready) return;
+    const t0 = performance.now();
+    console.log('[model] pre-warming WebGPU shaders…');
+    try {
+      await this.generate(
+        [{ role: 'user', content: 'Hi' }],
+        { maxTokens: 1 },
+      );
+      console.log(`[model] pre-warm done in ${((performance.now() - t0) / 1000).toFixed(1)}s — shaders compiled`);
+    } catch {
+      console.warn('[model] pre-warm failed (non-fatal)');
+    }
+  }
+
   /** Clear cached model files from browser storage */
   async clearCache() {
     if (typeof caches !== 'undefined') {
