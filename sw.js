@@ -2,7 +2,7 @@
 // Primary job: make the model cache persistent so the browser doesn't evict
 // the ~500MB model files when storage pressure is high (common on phones).
 
-const APP_CACHE = 'lcr-app-v1';
+const APP_CACHE = 'lcr-app-v2';
 const APP_FILES = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const APP_FILES = [
   './js/app.js',
   './js/config.js',
   './js/model.js',
+  './js/worker.js',
   './js/pipeline.js',
   './js/router.js',
   './plugins/clipboard.js',
