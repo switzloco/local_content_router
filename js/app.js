@@ -334,8 +334,16 @@ function appendSegmentCard(seg) {
     }
   });
 
-  // Send button
+  // Ignored segments: hide send button, show skip message
   const sendBtn = card.querySelector('.card-send-btn');
+  if (seg.category === 'ignore') {
+    sendBtn.hidden = true;
+    const sentMsg = card.querySelector('.card-sent-msg');
+    sentMsg.hidden = false;
+    sentMsg.textContent = 'Skipped — not routed';
+    sentMsg.style.color = 'var(--text-muted)';
+  }
+
   sendBtn.addEventListener('click', async () => {
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending…';
@@ -370,7 +378,9 @@ async function onRouteAll() {
   dom.btnRouteAll.disabled = true;
   dom.btnRouteAll.textContent = 'Sending…';
 
-  const results = await router.routeAll(segments, destinationMap, cfg.deidentify);
+  // Filter out ignored segments
+  const routableSegments = segments.filter(s => s.category !== 'ignore');
+  const results = await router.routeAll(routableSegments, destinationMap, cfg.deidentify);
 
   for (const { segmentId, result } of results) {
     const card = dom.segContainer.querySelector(`[data-id="${segmentId}"]`);

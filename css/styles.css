@@ -39,6 +39,8 @@
   --cat-finance-bg: rgba(217, 119, 6, 0.10);
   --cat-education:  #7c3aed;
   --cat-education-bg:rgba(124, 58, 237, 0.10);
+  --cat-ignore:     #9ca3af;
+  --cat-ignore-bg:  rgba(156, 163, 175, 0.08);
   --cat-other:      #6b7280;
   --cat-other-bg:   rgba(107, 114, 128, 0.10);
 
@@ -264,6 +266,7 @@ body {
 .segment-card[data-category="health"]    { border-left: 4px solid var(--cat-health); }
 .segment-card[data-category="finance"]   { border-left: 4px solid var(--cat-finance); }
 .segment-card[data-category="education"] { border-left: 4px solid var(--cat-education); }
+.segment-card[data-category="ignore"]    { border-left: 4px solid var(--cat-ignore); opacity: 0.5; }
 .segment-card[data-category="other"]     { border-left: 4px solid var(--cat-other); }
 
 .segment-card.sent { opacity: 0.55; }
@@ -290,6 +293,7 @@ body {
 [data-category="health"]    .category-pill { background: var(--cat-health-bg);     color: var(--cat-health); }
 [data-category="finance"]   .category-pill { background: var(--cat-finance-bg);    color: var(--cat-finance); }
 [data-category="education"] .category-pill { background: var(--cat-education-bg);  color: var(--cat-education); }
+[data-category="ignore"]    .category-pill { background: var(--cat-ignore-bg);     color: var(--cat-ignore); }
 [data-category="other"]     .category-pill { background: var(--cat-other-bg);      color: var(--cat-other); }
 
 .confidence-badge {
