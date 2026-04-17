@@ -3,13 +3,25 @@
   "short_name": "Router",
   "description": "Route your brain dump to the right app — entirely on your device using Gemma 4",
   "start_url": ".",
+  "scope": ".",
+  "id": "local-content-router",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f5f5f7",
   "theme_color": "#6366f1",
-  "icons": [],
+  "categories": ["productivity", "utilities", "medical"],
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
   "share_target": {
-    "action": "/",
+    "action": ".",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "title": "title",
       "text": "text",

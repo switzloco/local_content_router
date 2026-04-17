@@ -14,7 +14,7 @@ import model from './model.js';
 // ── Compressed key maps ──
 // Gemma outputs: { c, f, s, p, t }
 // We expand to full keys after parsing
-const EXPAND_CATEGORY = { w: 'work', p: 'personal', h: 'health', f: 'finance', e: 'education', o: 'other' };
+const EXPAND_CATEGORY = { w: 'work', p: 'personal', h: 'health', f: 'finance', e: 'education', i: 'ignore', o: 'other' };
 
 function expandResult(compressed, originalText) {
   return {
@@ -163,8 +163,8 @@ async function fullClassify(segmentText, piiConfig, userInstructions) {
     {
       role: 'user',
       content: `Classify and de-identify. ONLY return JSON.
-{"c":"w|p|h|f|e|o","f":0.9,"s":"summary","p":["pii_types"],"t":"cleaned text"}
-c: w=work,p=personal,h=health,f=finance,e=education,o=other
+{"c":"w|p|h|f|e|i|o","f":0.9,"s":"summary","p":["pii_types"],"t":"cleaned text"}
+c: w=work,p=personal,h=health,f=finance,e=education,i=ignore(noise/irrelevant),o=other
 ${piiLine}
 ${rulesLine}
 Text: ${segmentText}`
@@ -190,7 +190,7 @@ Text: ${segmentText}`
   }
 }
 
-const VALID_CATEGORIES = new Set(['work', 'personal', 'health', 'finance', 'education', 'other']);
+const VALID_CATEGORIES = new Set(['work', 'personal', 'health', 'finance', 'education', 'ignore', 'other']);
 function validCategory(cat) {
   const c = String(cat || '').toLowerCase().trim();
   return VALID_CATEGORIES.has(c) ? c : 'other';

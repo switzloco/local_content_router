@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#6366f1"/>
+  <g fill="none" stroke="#fff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <!-- arrows splitting from center -->
+    <path d="M256 140 L256 280"/>
+    <path d="M256 280 L160 372"/>
+    <path d="M256 280 L352 372"/>
+    <!-- arrow heads -->
+    <path d="M148 340 L160 372 L192 360"/>
+    <path d="M320 360 L352 372 L364 340"/>
+    <!-- top dot -->
+    <circle cx="256" cy="128" r="20" fill="#fff" stroke="none"/>
+    <!-- bottom dots -->
+    <circle cx="160" cy="384" r="20" fill="#22c55e" stroke="none"/>
+    <circle cx="352" cy="384" r="20" fill="#3b82f6" stroke="none"/>
+  </g>
+  <!-- lock icon -->
+  <g transform="translate(226, 200)">
+    <rect x="4" y="24" width="52" height="36" rx="6" fill="#fff" opacity="0.9"/>
+    <path d="M16 24 V16 A14 14 0 0 1 44 16 V24" fill="none" stroke="#fff" stroke-width="6" opacity="0.9"/>
+  </g>
+</svg>

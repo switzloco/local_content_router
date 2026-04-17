@@ -2,7 +2,7 @@
 
 const STORAGE_KEY = 'lcr_config';
 
-const CATEGORIES = ['work', 'personal', 'health', 'finance', 'education', 'other'];
+const CATEGORIES = ['work', 'personal', 'health', 'finance', 'education', 'ignore', 'other'];
 
 const PII_TYPES = [
   'person_name', 'date', 'phone', 'email', 'address', 'account', 'medical_id',
@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
     health: 'local',
     finance: 'local',
     education: 'clipboard',
+    ignore: 'none',
     other: 'clipboard',
   },
   deidentify: true,
@@ -30,6 +31,7 @@ const DEFAULT_CONFIG = {
     personal: '',
     finance: 'mortgage, payment, account, bank, transfer, insurance, tax',
     education: 'student, class, curriculum, grades, assignment, semester, course',
+    ignore: 'sit, stay, heel, good boy, good girl, treat, walk, fetch, drop it, leave it, come here, no, bad',
     other: '',
   },
 };
